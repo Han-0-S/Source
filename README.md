@@ -359,7 +359,7 @@ RedHat
         * (사용자) ~/.bashrc
 
 ###############################
-제07장. VI/VIM 편집기
+제08장. VI/VIM 편집기
 ###############################
 
 1. VI 편집기 실행
@@ -387,3 +387,306 @@ RedHat
     syntax on
     set ai nu ts=4 sw=4 et
     ----------------------
+######################################
+제10장 관리자가 알아두면 유용한 명령
+######################################
+
+1. 파일 비교
+    cmp/diff CMD
+
+        [실무예] 파일 비교 - 현재 설정 파일과 백업 파일 비교
+        # diff httpd.conf httpd.conf.OLD
+        
+        [실무예] 디렉토리 비교 - 디렉토리 마이그레이션 이후 확인
+        # diff -r /was1 /was2
+
+2. 파일 내용 정렬
+    sort CMD
+        # CMD | sort -k 3
+        # CMD | sort -k 3 -r
+        
+        [실무예] 용량 점검
+        * df CMD + du CMD + find CMD + lsof CMD
+        
+        # df -hT
+        # du -sh /var
+        # cd /var ; du -sh * | sort -hr | more
+
+3. 파일 종류 확인
+    file CMD
+
+
+######################################
+제11장 파일 검색 및 고급 명령
+######################################
+
+1. 파일 내용 검색
+    grep CMD
+        # grep OPTIONS PATTERN file1
+        * OPTIONS: -l, -n, -r, -v, -i, -w, -A 
+        * PATTERN: *  .  ^root  root$  [abc]
+    
+        [참고] CMD | grep root 
+        # cat /etc/passwd | grep root 
+        # rpm -qa | grep httpd 
+        # ps -ef | grep rsyslogd 
+        # netstat -antup | grep :22 
+        # systemctl list-unit-files | grep ssh 
+        
+        [참고] 정규표현식(Regular Expression)
+        
+        [참고] egrep/fgrep CMD
+        * egrep == grep -E
+        * fgrep == grep -F
+        
+        [실무예] chklog/chklog.sh
+        # alias chklog='cat $1 | egrep -i "warn|error|fail|crit|alert|emerg"'
+        # chklog /var/log/messages
+
+2. 파일 찾기
+    find CMD
+        # find /
+        # find / -name file1 -type f
+        # find / -user fedora -group fedora
+        # find / -mtime -7|7|+7
+        # find / -size -300M|300M|+300M
+        # find / -perm -755|755
+        # find / -name file1 -type f -exec CMD {} \;
+        
+        [실무예] 오래된 로그 파일 지우기
+        * find CMD + crontab CMD
+        # find /LogDir -name "*.log" -type f -mtime +30 -exec rm -f {} \;
+
+        [실무예] 갑자기 파일 시스템이 풀(full) 난 경우
+        * df CMD + du CMD + find CMD + lsof CMD
+        # df -hT
+        # du -sh /var 
+        # cd /var ; du -sh * | sort -hr | more
+        # find /var -type f -mtime -2 -size +1G
+        [참고] lsof /var/log/db/db.log
+
+
+3. 고급 명령
+    *sed CMD
+    *awk CMD
+
+
+######################################
+제12장 압축과 아카이빙
+######################################
+
+1. 압축
+    gzip/gunzip CMD
+        # gzip file1
+        # gunzip -c file1.gz
+        # gunzip file1.gz
+    
+    bzip2/bunzip2 CMD
+        # bzip2 file1
+        # bunzip2 -c file1.bz2
+        # bunzip2 file1.bz2
+    
+    xz/unxz CMD
+        # xz file1
+        # unxz -c file1.xz
+        # unxz file1.xz
+
+2. 아카이빙
+    tar CMD
+        # tar cvf file.tar file1 file2
+        # tar tvf file.tar
+        # tar xvf file.tar
+    
+    *cpio CMD
+
+
+3. 압축 + 아카이빙
+    tar CMD
+        # tar cvzf file.tar.gz file1 file2
+        # tar tvzf file.tar.gz
+        # tar xvzf file.tar.gz
+
+        # tar cvjf file.tar.bz2 file1 file2
+        # tar tvjf file.tar.bz2
+        # tar xvjf file.tar.bz2
+
+        # tar cvJf file.tar.xz file1 file2
+        # tar tvJf file.tar.xz
+        # tar xvJf file.tar.xz
+    
+    jar CMD
+        # jar cvf file.jar file1 file2
+        # jar tvf file.jar
+        # jar xvf file.jar
+    
+    zip/unzip CMD
+        # zip -r file.zip file1 file2
+        # unzip -l file.zip
+        # unzip file.zip
+
+
+######################################
+제13장 배시쉘의 특성
+######################################
+
+배시쉘 특성 - 명령어 해석기(Command Interpreter)
+● 리다이렉션(Redirection): <, >, 2>
+● 파이프(Pipe): |
+● 쉘 기능(Shell Function): 
+● 변수(Variable): PATH, PS1
+● 메타캐릭터(Metacharacter): ''  ""  ``  ;
+● 히스토리(History):
+● 엘리어스(Alias):
+● 환경파일(Environment Files): /etc/profile, ~/.bash_profile, ~/.bashrc
+
+
+1) 리다이렉션(Redirection): <, >, 2>
+
+    fd
+    --------------------
+    0   stdin
+    1   stdout
+    2   stderr
+    --------------------
+    
+    (ㄱ) 입력 리다이렉션: <, 0< 
+        # wc -c < /etc/passwd
+    (ㄴ) 출력 리다이렉션: >, >>, 
+    (ㄷ) 에러 리다이렉션
+    
+    [실무예] 결과 메일 보내기
+    # mailx -s "[  OK  ] server1" admin@example.com < report.txt
+    
+    [실무예] 스크립트 로그 파일 생성 시
+    # ./script.sh > script.log 2>&1
+    
+    [실무예] 출력 내용이 많은 명령의 내용 분석을 위한 로그 파일 생성
+    # ./configure --prefix=/usr/local/apache2 > apache.log 2>&1
+    
+    [실무예] 일반 사용자가 에러메시지 출력이 많은 명령어 수행시 에러 메세지 출력 삭제하기
+    $ find / -name file1 -type f 2>/dev/null
+
+2) 파이프(Pipe): |
+    # CMD | more
+    # CMD | grep root
+    # CMD | CMD | ...
+    
+    [실무예] CMD | tee file.log
+    1) 모니터링 구문에서 "CMD | tee -a file" 형식
+        # while true
+        do
+            CMD | tee -a file.log
+            sleep 2
+        done
+    2) 여러 터미널의 출력 내용 공유하기
+        # script -a /dev/null | tee /dev/pts/1 | tee /dev/pts/2
+    3) 일반 사용자가 sudo 명령어 수행 시 리다이렉션
+        $ echo WEB | sudo tee /var/www/html/index.html
+    
+3) 쉘 기능(Shell Function): 
+
+    [참고] <TAB>, <TAB><TAB>, ↑↓→←
+
+4) 변수(Variable): PATH, PS1
+    변수의 종류
+    * 지역변수
+    * 환경변수
+    * 특수변수
+    
+    변수 선언 방법
+    (선언) # export VAR=5
+    (확인) # echo $VAR
+    (해제) # unset VAR
+
+    쉘 환경변수
+    ● PS1 변수(export PS1='[\u@\h \w]\$ ')(~/.bashrc)
+    ● PS2 변수
+    ● PATH 변수(export PATH=$PATH:/root/bin)(~/.bashrc)
+    ● HISTTIMEFORMAT 변수
+    ● HOME 변수
+    ● PWD 변수
+    ● LOGNAME 변수
+    ● USER 변수
+    ● UID 변수
+    ● TERM 변수
+    ● LANG 변수
+    ● SHELL 변수    
+
+5) 메타캐릭터(Metacharacter): ''  ""  ``  \ ;
+
+6) 히스토리(History):
+
+    관련 변수
+    * HISTSIZE
+    * HISTFILE
+    * HISTFILESIZE
+    
+    [참고] ble.sh
+    * bash => autosuggestion
+
+7) 엘리어스(Alias):
+    # alias cp='cp -i'
+    # alias
+    # unalias cp
+
+8) 환경파일(Environment Files): /etc/profile, ~/.bash_profile, ~/.bashrc
+    /etc/profile
+        /etc/profile.d/{*.sh,sh.local}
+        /etc/bashrc
+    
+    $HOME/.bash_profile
+        ~/.bashrc
+            /etc/bashrc
+    
+    $HOME/.bashrc
+        /etc/bashrc
+            /etc/profile.d/*.sh
+
+######################################
+제14장 프로세스 관리
+######################################
+
+1. 프로세스 정보
+    * PID, PPID
+    * /proc/PID/*
+
+2. 프로세스 관리
+    프로세스 실행
+        fg) # CMD
+        bg) # CMD &
+        
+        [참고] 백그라운드로 실행하는 경우
+    
+    프로세스 확인
+        # ps -ef | grep crond
+        # ps aux | grep crond
+    
+    프로세스 종료
+        # kill -9|-15 PID PID
+
+3. 프로세스 모니터링
+    top CMD
+        # top
+        * 정열: cPu, Mem
+        * 출력 내용 분석 <--- 
+
+
+######################################
+제15장 원격접속과 파일전송
+######################################
+
+######################################
+제16장 디스크 관리 - 장치 인식
+######################################
+
+######################################
+제17장 디스크 관리 - 파티션 작업
+######################################
+
+######################################
+제18장 디스크 관리 - 파일시스템 작업
+######################################
+
+######################################
+제19장 디스크 관리 - 마운트 작업
+######################################
