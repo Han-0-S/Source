@@ -668,24 +668,201 @@ RedHat
         # top
         * 정열: cPu, Mem
         * 출력 내용 분석 <--- 
-
+기타 모니터링 도구(epel-release 필요)
+    * htop       : CPU/MEM
+    * iotop      : DISK
+    * iftop/bmon : NET
+    * atop       : CPU/MEM/DISK/NET + Data Gathering
+    * btop       : CPU/MEM/DISK/NET
 
 ######################################
 제15장 원격접속과 파일전송
 ######################################
+1. 원격 접속
+    ssh CMD
+        # ssh 192.168.10.10
+        # ssh 192.168.10.10 'CMD'
+        
+        [실무예] 공개키 인증 방식
+        # ssh-keygen
+        # ssh-copy-id fedora@192.168.10.10
 
+2. 파일 전송
+    scp CMD
+        # scp file1 server2:/tmp
+        # scp server2:/tmp/file1 /test
+        # scp -r dir1 server2:/tmp
+        # scp main:/test/file1 server2:/test
 ######################################
 제16장 디스크 관리 - 장치 인식
 ######################################
+ # ls /
+    -> /dev/*
+    # man 7 hier
+    
+1. 선수지식
+    디스크의 종류: 
+        * HDD(Hard Disk Drive)
+            - IDE(SATA)
+            - SCSI(SAS))
+        * SSD(Solide State Disk)
+            - SSD
+            - NVMe
+
+    디스크 종류와 이름체계
+    ■ IDE           (예: /dev/hd)      - /dev/hda, /dev/hdb, /dev/hdc, /dev/hdd
+    ■ SCSI/SATA/SAS (예: /dev/sd)      - /dev/sda, /dev/sdb, /dev/sdc, ....
+    ■ NVMe          (예: /dev/nvme0n1) - /dev/nvme0n1, /dev/nvme0n2, /dev/nvme0n3, ...
+       /dev/nvme0n1, /dev/nvme0n2, /dev/nvme0n3, ....
+        * nvme0: 장치 이름(예: /dev/nvme0) => NVMe 컨트롤러(controller) 번호
+        * nY: 네임스페이스 이름(예: n1)    => 컨트롤러가 노출한 namespace(논리디바이스) 번호
+        * pZ: 파티션 이름(예: p1)          => namespace(또는 블록 디바이스)상의 파티션 번호
+    ■ virtio-blk 반가상화 스토리지(VM)  - /dev/vda, /dev/vdb, /dev/vdc, ...
+    ■ virtio-scsi 반가상화 스토리지(VM) - /dev/sda, /dev/sdb, /dev/sdc, ...
+    ■ SD/MMC/eMMC 스토리지(SD 카드)     - /dev/mmcblk0, /dev/mmcblk1, ....
+
+2. 장치 인식 작업
+    # poweroff
+    디스크 장착
+    Power ON
+    
+    # lsblk 
 
 ######################################
 제17장 디스크 관리 - 파티션 작업
 ######################################
+1. 선수지식
 
+파티션 종류와 이름체계
+* BIOS F/W -> MBR Partition Type
+      Primary partition(1-4)
+      Extended partition
+      - Logical partition(5-15)   
+ 
+* UEFI F/W -> GPT Partition Type
+      Partition(1-128)
+
+2. 파티션 작업
+파티션 설정 툴 종류
+    * fdisk CMD
+        # fdisk /dev/sdb
+        # fdisk -l /dev/sdb
+    * gdisk CMD
+        # gdisk /dev/sdb
+        # gdisk -l /dev/sdb
+    * parted CMD
+        ?
 ######################################
 제18장 디스크 관리 - 파일시스템 작업
 ######################################
+1. 선수지식
+    파일 시스템? 파일을 저장하고 관리하는 구조체계
+    파일 시스템 종류
+        * ext4 : 기능
+        * xfs  : 성능(r/w)
+
+2. 파일시스템 작업
+    mkfs CMD
+        # mkfs.ext4 /dev/sdb1
+        # mkfs.xfs /dev/sdb1
+        
+        # lsblk --fs
 
 ######################################
 제19장 디스크 관리 - 마운트 작업
 ######################################
+1. 마운트 확인
+    # df -hT
+    # mount
+
+2. 마운트 관련 파일
+    /etc/fstab
+    /etc/mtab
+
+3. 마운트 관련 명령
+    mount CMD
+        # mount -t ext4 -o defaults /dev/sdb1 /oracle
+        -t ext4: ext4, xfs
+        -o defaults: rw, suid, dev, exec, auto, nouser, async
+            => ro,remount
+    umount CMD
+        # umount /testmount
+        # umount /dev/sdb1
+        
+        [실무예] target is busy
+        # fuser -cu /home
+        # fuser -ck /home
+        # umount /home
+    mount -a CMD (/etc/fstab)
+    umount -a CMD(/etc/mtab)
+   ######################################
+제20장 파일시스템 점검 작업
+######################################
+
+파일 시스템 점검(umount 작업 후 fsck)
+* (ext4) fsck /dev/sdb1
+* (xfs ) xfs_repair /dev/sdb1
+
+    [실무예] fsck -y
+    # fsck -y /dev/sdb1 2>&1 | tee fsck.log
+
+
+######################################
+제21장 파일시스템 용량 모니터링 작업
+######################################
+
+df CMD + du CMD + find CMD + lsof CMD
+    # df -hT
+    # du -sh /var
+    # cd /var ; du -sh * | sort -nr | more
+    # find /var -type f -size +1G
+    # lsof /var/log/messages
+
+    [참고] 모니터링 툴 => 웹콘솔
+    # systemctl enable --now cockpit.socket
+    # firefox https://192.168.10.20:9090 &
+
+
+######################################
+제22장 LVM 관리
+######################################
+
+1. PV 관리
+    # pvcreate /dev/sdc1
+    # pvremove /dev/sdc1
+    
+    # pvs
+    # pvdisplay /dev/sdc1
+
+2. VG 관리
+    # vgcreate vg1 /dev/sdc1
+    # vgremove vg1
+    
+    # vgs
+    # vgdiplay vg1
+    
+    # vgextend vg1 /dev/sdd1
+    # vgreduce vg1 /dev/sdd1
+    
+    # vgrename vg1 vg2
+
+3. LV 관리
+
+4. FS 관리
+
+5. Mount 관리
+
+
+######################################
+제23장 네트워크 관리
+######################################
+
+######################################
+제24장 SELinux 관리
+######################################
+
+######################################
+제25장 방화벽 관리
+######################################
+
+
