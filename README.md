@@ -1,7 +1,6 @@
-
-     =============================
-       주말 리눅스(26.02.28) 과정
-     =============================
+=============================
+ 주말 리눅스(26.02.28) 과정
+=============================
 
 =============================
         LINUX Lv1. OT
@@ -852,22 +851,147 @@ df CMD + du CMD + find CMD + lsof CMD
      vgrename vg1 vg2
 
 3. LV 관리
+    # lvcreate -L 30G -n lv1 vg1
+    # lvremove /dev/vg1/lv1
+    
+    # lvs
+    # lvdisplay /dev/vg1/lv1
+    
+    # lvextend -L +5G /dev/vg1/lv1
+    # lvreduce -L -5G /dev/vg1/lv1
+    
+    # lvrename /dev/vg1/lv1 /dev/vg1/lv2
 
 4. FS 관리
+  # mkfs.ext4 /dev/vg1/lv1
 
 5. Mount 관리
+  # mkdir -p /lv1
+  # mount /dev/vg1/lv1 /lv1
+  # vi /etc/fstab
+  # mount -a
+6. 실습 시나리오
 
+파일시스템(EX: /lv2) 용량을 늘리는 경우
+    ■ 작업 계획
+    ● /lv2 파일시스템이 용량이 부족하여 파일시스템 용량을 늘리기
+    ● /lv2((500M) + 1G = 1.5G)
+    # lvextend /dev/vg1/lv2 -l +100%FREE -r
+
+VG(EX: vg1)에 PV(EX: sdf1)를 추가하는 경우
+    ■ 작업 계획
+    ● LV1(/dev/vg1/lv1(1.5G + ?)) 용량을 늘리고 싶다. 
+    ● VG(/dev/vg1)에는 남는 공간이 없다. 
+    ● VG(/dev/vg1)에 PV(/dev/sdf1) 추가하고 LV(/dev/vg1/lv1)에 용량 늘리기 
+        - vg1(sdc1, sdd1, sde1) + sdf1 
+    # vgextend vg1 /dev/sdf1
+    # lvextend /dev/vg1/lv1 -l +100%FREE -r
+
+LV 용량 감소(Filesystem Shrinking)
+    ■ 작업 계획
+    (가정) VG에 증설할 PV는 존재하지 않는다.
+    ● /lv1 용량은 남은 상태이고, /lv2는 용량이 부족한 상태이다.
+    ● 따라서, /lv1 용량을 감소 시키고(2.5G - ?), /lv2 용량을 늘린다(1.5G + ?)
+        - /lv1 : 용량 감소(2.5G - 500M)   - /lv2 : 용량 증설(1.5G + 500M)
+    # lvreduce /dev/vg1/lv1 -L -500M -r
+    # lvextend /dev/vg1/lv2 -l +100%FREE -r
+
+VG 안의 PV를 새로운 PV로 교체
+    ■ 작업 계획
+    ● (전제조건) 새로운 디스크(/dev/sdg(1G), /dev/sdh(1G))가 추가되어 있고, 
+       하나의 파티션(/dev/sdg1, /dev/sdh1)으로 설정 되어 있어야 한다.
+    ● 새로 추가된 디스크/파티션(ex: /dev/sdg1)을 PV 선언하고, VG(ex: vg1)에 
+       포함시킨다. 교체할 디스크(ex: /dev/sdf1)의 내용을 pvmove 명령을 사용하
+       여 새로 추가된 디스크(ex: /dev/sdg1)로 데이터를 이동시킨다. 
+       교체할 디스크의 내용은 전혀 사용되지 않는 상태가 되므로, VG에서 제거한다.
+    # fdisk /dev/sdg
+    -> /dev/sdg1(partition id: 8e)
+    # pvcreate /dev/sdg1
+    # vgextend vg1 /dev/sdg1
+    # pvmove /dev/sdf1 /dev/sdg1
+    # vgreduce vg1 /dev/sdf1
 
 =============================
 제23장 네트워크 관리
 =============================
+1. 네트워크 관리 체계(NetworkManager)
+    NetworkManager? 네트워크 관리하는 서비스/데몬
+    * 장치(Device)
+    * 연결(Connection/Profile)
+
+2. 네트워크 설정 확인 
+    # ip address
+    # ip route
+    # cat /etc/resolv.conf
+    
+    [참고] /root/bin/ipconfig.sh
+
+3. 네트워크 설정 툴
+    nmcli CMD
+    nmtui CMD
+    nm-connection-editor 툴
+
+4. 네트워크 시나리오 작업
+
+    (ㄱ) IP 변경 작업
+        # nmtui
+        # nmcli con up eth0
+    (ㄴ) NIC 추가 작업
+        NIC 추가 작업
+        # nmtui
+        # nmcli con up eth1
+    (ㄷ) 하나의 NIC에 여러개의 IP 할당
+        # nmtui
+        # nmcli con up eth0
+    (ㄹ) 호스트 이름 변경
+        # nmtui
+        # reboot
+    (ㅁ) 본딩(Bonding)
+        (전제조건)
+        # nmtui
+        # watch 'cat /proc/net/bonding/bond0'
 
 =============================
 제24장 SELinux 관리
 =============================
+1. SELinux 기본 목적
+    * 손상된 시스템 서비스로 부터 사용자 데이터 보호 하는 역할
+    * 프로세스가 건드릴 수 있는 파일, 디렉토리, 포트에 대해 보안 레이블을 설정하여
+      접근제어 하는 방식이다.
 
+2. SELinux 3가지 종류
+    * enforcing : 제어(0) + 로깅(0)
+    * permissive: 제어(X) + 로깅(0)
+    * disabled  : 제어(X) + 로깅(X)
+
+3. SELinux 타입 변경(enforcing -> permissive)
+    # setenforce 0
+    # vi /etc/selinux/config
+    SELINUX=permissive
+    
+    # sestatus
 =============================
 제25장 방화벽 관리
 =============================
+1. firewalld
+    firewalld? 동적 방화벽 관리자
+    * nftables 프레임워크의 frontend 서비스
+    
+    용어?
+    * zone(영역)? 방화벽 규칙의 집합
+    * service(서비스)? 포트/프로토콜의 집합
+    * port(포트)? "포트/프로토콜"
 
+2. 방화벽 설정 툴
+    * firewall-cmd CMD
+    * firewall-config & (firewall-config 패키지)
+    * 웹 콘솔
+    
+3. 고급 규칙(Rich Rule)
+
+    # firewall-config &
+    -> rich rule 생성
+    
+    # firewall-cmd --permanent --add-rich-rule="...."
+    # firewall-cmd --reload
 
